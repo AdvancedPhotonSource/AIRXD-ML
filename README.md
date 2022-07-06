@@ -1,4 +1,4 @@
-# ARiXD-ML
+# ARIXD-ML
 
 ARiXD-ML stands for ARtifacts Identification of X-ray Diffraction data using Machine Learning methods.
 
