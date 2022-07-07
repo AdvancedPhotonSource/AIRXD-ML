@@ -37,3 +37,20 @@ def parse_imctrl(filename):
 
     return controls
 
+class Dataset:
+    def __init__(self):
+        self.X = None
+        self.y = None
+
+    def get_images(self, path, ext='.tif'):
+        ipath = sorted(glob(os.path.join(path, f'*{ext}')))
+        #if path[-1] == '/':
+        #    ipath = sorted(glob(path+f'*{ext}'))
+        #else:
+        #    ipath = sorted(glob(path+f'/*{ext}'))
+        
+        images = np.zeros((len(ipath), 2880, 2880))
+        for i, ip in enumerate(ipath):
+            images[i] += imageio.volread(ip)
+
+        return images
