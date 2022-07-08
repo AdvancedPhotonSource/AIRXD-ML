@@ -15,4 +15,4 @@ python setup.py install
 
 # Example
 
-See [notebook](https://github.com/AdvancedPhotonSource/tree/main/notebook)!
+See [notebook](https://github.com/AdvancedPhotonSource/AIRXD-ML/tree/main/notebook)!
