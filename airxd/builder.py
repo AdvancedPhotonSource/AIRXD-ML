@@ -5,6 +5,7 @@ ffibuilder.cdef("""
     void mask(int M, int N, int chan, double dtth, double eps, int* tam, double* ta, double* band, double* tths, double* omask);
     """)
 
-ffibuilder.set_source("_mask", "", sources=["mask.cpp"],)
+ffibuilder.set_source("airxd._mask", "", sources=["airxd/mask.cpp"], include_dirs=["airxd/"])
 
-ffibuilder.compile(verbose=True)
+if __name__ == '__main__':
+    ffibuilder.compile(verbose=True)
