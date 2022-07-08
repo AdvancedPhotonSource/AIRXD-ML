@@ -13,6 +13,6 @@ To install the code, please execute this command:
 python setup.py install
 ```
 
-# Example
+## Example
 
 See [notebook](https://github.com/AdvancedPhotonSource/AIRXD-ML/tree/main/notebook)!
