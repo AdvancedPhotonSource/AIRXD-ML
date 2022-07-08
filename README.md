@@ -9,9 +9,9 @@ ARiXD-ML stands for ARtifacts Identification of X-ray Diffraction data using Mac
 ## Installation
 
 To install the code, please execute this command:
-'''
+```
 python setup.py install
-'''
+```
 
 # Example
 
