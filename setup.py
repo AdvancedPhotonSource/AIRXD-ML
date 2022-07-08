@@ -2,8 +2,8 @@ import setuptools
 from os import path
 from distutils.core import setup
 
-droot = path.abspath(path.dirname(__file__))
-with open(path.join(droot, 'README.md'), encoding="utf-8") as f:
+root = path.abspath(path.dirname(__file__))
+with open(path.join(root, 'README.md'), encoding="utf-8") as f:
     long_description = f.read()
 with open("README.md", "r") as fh:
     long_description = fh.read()
@@ -17,14 +17,13 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     packages=["airxd"],
+    package_data={
+        "airxd": ["*.cpp"],
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent"
     ],
-    #package_data={
-    #    'airxd': ["mask.cpp"],
-    #},
-    package_dir={'airxd': 'airxd'},
     install_requires=[
         'cffi>=1.15.1',
         'numpy==1.21.6',
