@@ -7,12 +7,11 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier, ExtraTreesClassifier
 
 class ARIXD:
-    def __init__(self, algorithm, parameters, features, TA=None):
+    def __init__(self, algorithm, parameters, features):
         self.algorithm = algorithm
         self.parameters = self.set_parameters(algorithm, parameters)
         self.model = self.get_model(algorithm)
         self.features = features
-        self.TA = TA
         if self.features['locations']:
             self.xloc, self.yloc = self.get_locations()
         else:
@@ -162,13 +161,21 @@ class ARIXD:
 
         return model
 
-    def train(self, images, labels, include_data='random', training_split=30):
+    def train(self, dataset, include_data='random', training_images=3):
+        include = {}
         if include_data == 'random':
-            include_data = random.sample(range(0, len(images)), int(training_split/100*len(images)))
-        print(f"Images used for training: {include_data}")
-
-        self.X = self.get_feature(images[include_data])
-        self.y = self.get_label(labels[include_data])
+            print("Data included in training: ")
+            for i in range(dataset.n):
+                #n = int(training_split/100*len(images))
+                include[i] = random.sample(range(0, len(dataset.images[i])), training_images)
+                print(i, ": ", include[i])
+        else:
+            include = include_data
+            for k, v in include.items():
+                print(k, ": ", v)
+    
+        self.X = self.get_feature(dataset, include)
+        self.y = self.get_label(dataset, include)
         self.model.fit(self.X, self.y)
         return
 
@@ -202,42 +209,49 @@ class ARIXD:
     def load(self):
         return
 
-    def get_feature(self, images):
-        shp = images.shape
-        X = np.zeros((shp[0]*shp[1]*shp[2], self.no_of_features))
-
+    def get_feature(self, dataset, include_data):
+        shp = [dataset.shape[0], dataset.shape[1]]
+        n = sum([len(v) for v in include_data.values()])
+        X = np.zeros((n*shp[0]*shp[1], self.no_of_features))
+        
         c = 0
-        for image in images:
-            f = 0
-            X[c:c+shp[1]*shp[2], f] += image.ravel()
-            f += 1
-            if self.TA is not None:
-                X[c:c+shp[1]*shp[2], f] +=  self.TA.ravel()
+        for i, images in dataset.images.items():
+            for j in include_data[i]:
+                f = 0
+                X[c:c+shp[0]*shp[1], f] += images[i][j].ravel()
                 f += 1
-            if self.xloc is not None and self.yloc is not None:
-                X[c:c+shp[1]*shp[2], f] += self.xloc.ravel()
-                X[c:c+shp[1]*shp[2], f+1] += self.yloc.ravel()
-                f += 2
-            if 'savgol' in self.features:
-                for window in self.features['savgol']:
-                    X[c:c+shp[1]*shp[2], f] += self.get_savgol_filter(image, window).ravel()
+                
+                if self.features['angle']:
+                    X[c:c+shp[0]*shp[1], f] +=  dataset.TAs[i].ravel()
                     f += 1
-            c += shp[1]*shp[2]
-            f = 0
 
+                if self.xloc is not None and self.yloc is not None:
+                    X[c:c+shp[0]*shp[1], f] += self.xloc.ravel()
+                    X[c:c+shp[0]*shp[1], f+1] += self.yloc.ravel()
+                    f += 2
+
+                if 'savgol' in self.features:
+                    for window in self.features['savgol']:
+                        X[c:c+shp[0]*shp[1], f] += self.get_savgol_filter(images[i][j], window).ravel()
+                        f += 1
+                c += shp[0]*shp[1]
+                    
         self.normalizer = StandardScaler()
         X = self.normalizer.fit_transform(X)
 
         return X
 
-    def get_label(self, labels):
-        shp = labels.shape
-        y = np.zeros((shp[0]*shp[1]*shp[2], 1))
+    def get_label(self, dataset, include_data):
+        shp = [dataset.shape[0], dataset.shape[1]]
+        n = sum([len(v) for v in include_data.values()])
+        y = np.zeros((n*dataset.shape[0]*dataset.shape[1], 1))
 
         c = 0
-        for label in labels:
-            y[c:c+shp[1]*shp[2], 0] += label.ravel()
-            c += shp[1]*shp[2]
+        for i, labels in dataset.labels.items():
+            for j in include_data[i]:
+                y[c:c+shp[0]*shp[1], 0] += labels[i][j].ravel()
+                c += shp[1]*shp[2]
+        
         return y
 
     def get_savgol_filter(self, image, window, poly=3, order=1):
