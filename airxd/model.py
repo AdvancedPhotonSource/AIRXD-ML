@@ -173,21 +173,27 @@ class ARIXD:
             include = include_data
             for k, v in include.items():
                 print(k, ": ", v)
+
+        # Set Image shape
+        self.shape = (dataset.shape[0], dataset.shape[1])
     
         self.X = self.get_feature(dataset, include)
         self.y = self.get_label(dataset, include)
         self.model.fit(self.X, self.y)
         return
 
-    def predict(self, image):
-        shp = image.shape
-        X = np.zeros((shp[0]*shp[1], self.no_of_features))
+    def predict(self, image, TA=None):
+        if image.shape != self.shape:
+            msg = "The image shape is not the same with the model"
+            raise ValueError(msg)
+
+        X = np.zeros((self.shape[0]*self.shape[1], self.no_of_features))
 
         f = 0
         X[:, f] += image.ravel()
         f += 1
-        if self.TA is not None:
-            X[:, f] += self.TA.ravel()
+        if TA is not None:
+            X[:, f] += TA.ravel()
             f += 1
         if self.xloc is not None and self.yloc is not None:
             X[:, f] += self.xloc.ravel()
@@ -201,7 +207,7 @@ class ARIXD:
         X = self.normalizer.transform(X)
         y_pred = self.model.predict(X)
 
-        return y_pred.reshape(shp[0], shp[1])
+        return y_pred.reshape(self.shape[0], self.shape[1])
 
     def save(self):
         return
@@ -217,8 +223,9 @@ class ARIXD:
         c = 0
         for i, images in dataset.images.items():
             for j in include_data[i]:
+
                 f = 0
-                X[c:c+shp[0]*shp[1], f] += images[i][j].ravel()
+                X[c:c+shp[0]*shp[1], f] += images[j].ravel()
                 f += 1
                 
                 if self.features['angle']:
@@ -249,9 +256,9 @@ class ARIXD:
         c = 0
         for i, labels in dataset.labels.items():
             for j in include_data[i]:
-                y[c:c+shp[0]*shp[1], 0] += labels[i][j].ravel()
-                c += shp[1]*shp[2]
-        
+                y[c:c+shp[0]*shp[1], 0] += labels[j].ravel()
+                c += shp[0]*shp[1]
+
         return y
 
     def get_savgol_filter(self, image, window, poly=3, order=1):

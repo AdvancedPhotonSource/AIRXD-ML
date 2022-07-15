@@ -37,19 +37,22 @@ class Dataset:
         # get images
         for i, path in enumerate(directory_names):
             ipath = sorted(glob(os.path.join(path, f'*{image_ext}')))
+            #print(ipath)
             self.images[i] = np.zeros((len(ipath), self.shape[0], self.shape[1]))
             for j, ip in enumerate(ipath):
-                self.images[i] += imageio.volread(ip)
+                self.images[i][j] += imageio.volread(ip)
 
         # get labels
         for i, path in enumerate(directory_names):
-            lpath = sorted(glob(os.path.join(path, 'masks', 'f*{label_ext}')))
+            lpath = sorted(glob(os.path.join(path, 'masks', f'*{label_ext}')))
+            #print(lpath)
+            #import sys; sys.exit()
             self.labels[i] = np.zeros((len(lpath), self.shape[0], self.shape[1]))
             for j, lp in enumerate(lpath):
                 if label_ext == '.tif':
-                    self.labels[i] += imageio.volread(lp)
+                    self.labels[i][j] += imageio.volread(lp)
                 else:
-                    self.labels[i] += np.load(lp)
+                    self.labels[i][j] += np.load(lp)
 
     def peneCorr(self, tth, dep, dist):
         return dep*(1.-npcosd(tth))*dist**2/1000.

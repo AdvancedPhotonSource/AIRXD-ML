@@ -35,7 +35,7 @@ setup(
         'notebook==6.4.12',
         'opencv-python==4.6.0.66',
     ],
-    python_requires="==3.7.13",
+    python_requires=">=3.7.9",
     setup_requires=['cffi>=1.15.1'],
     cffi_modules=[
         "airxd/builder.py:ffibuilder"
