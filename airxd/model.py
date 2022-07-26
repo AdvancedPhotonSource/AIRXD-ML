@@ -1,3 +1,4 @@
+import cv2
 import random
 import numpy as np
 from sklearn.preprocessing import StandardScaler
@@ -11,20 +12,89 @@ class ARIXD:
         self.algorithm = algorithm
         self.parameters = self.set_parameters(algorithm, parameters)
         self.model = self.get_model(algorithm)
-        self.features = features
-        if self.features['locations']:
+        self.features = self.set_features(features)
+        
+    def set_features(self, features):
+        ''' Set the features used in the ML method. '''
+        _features = {'intensity': True,
+                     'angle': True,
+                     'locations': False,
+                     'savgol': False,
+                     'sobel': False,
+                     'scharr': False,
+                     'laplacian': False}
+        
+        # Check if the feature is implemented
+        msg = 'The feature is not implemented.'
+        for k, v in features.items():
+            if k not in _features:
+                raise NotImplementedError(msg)
+        
+        _features.update(features)
+
+        # Get the pixel locations
+        if _features['locations']:
             self.xloc, self.yloc = self.get_locations()
         else:
             self.xloc, self.yloc = None, None
+        
+        # Set savgol window parameter to a list
+        if _features['savgol']:
+            if not isinstance(_features['savgol'], list):
+                _features['savgol'] = [_features['savgol']]
 
+        # Set Sobel kernel
+        if _features['sobel']:
+            if isinstance(_features['sobel'], bool):
+                _features['sobel'] = [3]
+            elif isinstance(_features['sobel'], int) and _features['sobel'] in [1, 3, 5, 7]:
+                _features['sobel'] = [_features['sobel']]
+            elif isinstance(_features['sobel'], list):
+                for sobel in _features['sobel']:
+                    if sobel not in [1, 3, 5, 7]:
+                        msg = 'The Sobel kernel is not available.'
+                        raise ValueError(msg)
+            else:
+                msg = 'The Sobel kernel is not available.'
+                raise ValueError(msg)
+
+        # Set laplacian kernel
+        if _features['laplacian']:
+            if isinstance(_features['laplacian'], bool):
+                _features['laplacian'] = [1]
+            elif isinstance(_features['laplacian'], int) and _features['laplacian'] in [1, 3, 5, 7]:
+                _features['laplacian'] = [_features['laplacian']]
+            elif isinstance(_features['laplacian'], list):
+                for laplace in _features['laplacian']:
+                    if laplace not in [1, 3, 5, 7]:
+                        msg = 'The Laplacian kernal is not available.'
+                        raise ValueError(msg)
+            else:
+                msg = 'The Laplacian kernel is not available.'
+                raise ValueError(msg)
+
+
+        # Compute the total number of features
         self.no_of_features = 0
-        for k, v in self.features.items():
+        for k, v in _features.items():
             if v:
-                self.no_of_features += 1
-                if k == 'locations':
+                if k == 'savgol':
+                    self.no_of_features += len(v)
+                elif k == 'locations':
+                    self.no_of_features += 2
+                elif k == 'sobel':
+                    self.no_of_features += len(v)
+                elif k == 'scharr':
+                    self.no_of_features += 1
+                elif k == 'laplacian':
+                    self.no_of_features += len(v)
+                else:
                     self.no_of_features += 1
 
+        return _features
+
     def set_parameters(self, algorithm, parameters):
+        ''' Set the parameters of the intended ML method. '''
         if algorithm == 'gradient_boosting':
             params = {'n_estimators': 100,
                       'eta': 0.3,
@@ -84,6 +154,7 @@ class ARIXD:
         return params
 
     def get_model(self, algorithm):
+        ''' Define all the available algorithms of AIRXD method. '''
         if algorithm == 'gradient_boosting':
             model = XGBClassifier(n_estimators=self.parameters['n_estimators'],
                                        eta=self.parameters['eta'],
@@ -95,19 +166,18 @@ class ARIXD:
                                        reg_lambda=self.parameters['reg_lambda'],
                                        eval_metric=self.parameters['eval_metric'],
                                        n_jobs=self.parameters['n_jobs'],
-                                       #base_score=self.parameters['base_score'],
-                                       #colsample_bylevel=self.parameters['colsample_bylevel'],
-                                       #colsample_bytree=self.parameters['colsample_bytree'],
-                                       #min_child_weight=self.parameters['min_child_weight'],
-                                       #missing=self.parameters['missing'],
-                                       #nthread=self.parameters['nthread'],
-                                       #objective=self.parameters['objective'],
-                                       #reg_alpha=self.parameters['reg_alpha'],
-                                       #scale_pos_weight=self.parameters['scale_pos_weight'],
-                                       #seed=self.parameters['seed'],
-                                       #subsample=self.parameters['subsample'],
-                                       #max_delta_step=self.parameters['max_delta_step'])
-                                       )
+                                       base_score=self.parameters['base_score'],
+                                       colsample_bylevel=self.parameters['colsample_bylevel'],
+                                       colsample_bytree=self.parameters['colsample_bytree'],
+                                       min_child_weight=self.parameters['min_child_weight'],
+                                       missing=self.parameters['missing'],
+                                       nthread=self.parameters['nthread'],
+                                       objective=self.parameters['objective'],
+                                       reg_alpha=self.parameters['reg_alpha'],
+                                       scale_pos_weight=self.parameters['scale_pos_weight'],
+                                       seed=self.parameters['seed'],
+                                       subsample=self.parameters['subsample'],
+                                       max_delta_step=self.parameters['max_delta_step'])
 
         elif algorithm == 'random_forest':
             model = RandomForestClassifier(n_estimators=self.parameters['n_estimators'],
@@ -159,6 +229,10 @@ class ARIXD:
                                               metric_params=self.parameters['metric_params'],
                                               n_jobs=self.parameters['n_jobs'])
 
+        else:
+            msg = "The algorithm isn't implemented."
+            raise NotImplementedError(msg)
+
         return model
 
     def train(self, dataset, include_data='random', training_images=3):
@@ -184,7 +258,7 @@ class ARIXD:
 
     def predict(self, image, TA=None):
         if image.shape != self.shape:
-            msg = "The image shape is not the same with the model"
+            msg = "The image shape is not the same with the model."
             raise ValueError(msg)
 
         X = np.zeros((self.shape[0]*self.shape[1], self.no_of_features))
@@ -195,13 +269,29 @@ class ARIXD:
         if TA is not None:
             X[:, f] += TA.ravel()
             f += 1
+        
         if self.xloc is not None and self.yloc is not None:
             X[:, f] += self.xloc.ravel()
             X[:, f+1] += self.yloc.ravel()
             f += 2
-        if 'savgol' in self.features:
+        
+        if self.features['savgol']:
             for window in self.features['savgol']:
                 X[:, f] += self.get_savgol_filter(image, window).ravel()
+                f += 1
+
+        if self.features['sobel']:
+            for ksize in self.features['sobel']:
+                X[:, f] += self.get_sobel(image, ksize=ksize).ravel()
+                f += 1
+
+        if self.features['scharr']:
+            X[:, f] += self.get_scharr(image).ravel()
+            f += 1
+
+        if self.features['laplacian']:
+            for ksize in self.features['laplacian']:
+                X[:, f] += self.get_laplace(image, ksize=ksize).ravel()
                 f += 1
 
         X = self.normalizer.transform(X)
@@ -237,10 +327,25 @@ class ARIXD:
                     X[c:c+shp[0]*shp[1], f+1] += self.yloc.ravel()
                     f += 2
 
-                if 'savgol' in self.features:
+                if self.features['savgol']:
                     for window in self.features['savgol']:
-                        X[c:c+shp[0]*shp[1], f] += self.get_savgol_filter(images[i][j], window).ravel()
+                        X[c:c+shp[0]*shp[1], f] += self.get_savgol_filter(images[j], window).ravel()
                         f += 1
+
+                if self.features['sobel']:
+                    for ksize in self.features['sobel']:
+                        X[c:c+shp[0]*shp[1], f] += self.get_sobel(images[j], ksize=ksize).ravel()
+                        f += 1
+
+                if self.features['scharr']:
+                    X[c:c+shp[0]*shp[1], f] += self.get_scharr(images[j]).ravel()
+                    f += 1
+
+                if self.features['laplacian']:
+                    for ksize in self.features['laplacian']:
+                        X[c:c+shp[0]*shp[1], f] += self.get_laplace(images[j], ksize=ksize).ravel()
+                        f += 1
+                
                 c += shp[0]*shp[1]
                     
         self.normalizer = StandardScaler()
@@ -269,6 +374,30 @@ class ARIXD:
             dx[i,:] = savgol_filter(image[i,:], window, poly, deriv=order)
             dy[:,i] = savgol_filter(image[:,i], window, poly, deriv=order)
         return dx+dy
+
+    def get_sobel(self, image, ksize=3, combine='l1'):
+        dx = cv2.Sobel(image, ddepth=cv2.CV_64F, dx=1, dy=0, ksize=ksize)
+        dy = cv2.Sobel(image, ddepth=cv2.CV_64F, dx=0, dy=1, ksize=ksize)
+        if combine == 'l1':
+            dxy = (dx + dy) * 0.5
+        elif combine == 'l2':
+            msg = 'l2 is not implemented.'
+            raise ValueError(msg)
+        return dxy
+
+    def get_scharr(self, image, combine='l1'):
+        dx = cv2.Scharr(image, ddepth=cv2.CV_64F, dx=1, dy=0)
+        dy = cv2.Scharr(image, ddepth=cv2.CV_64F, dx=0, dy=1)
+        if combine == 'l1':
+            dxy = (dx + dy) * 0.5
+        elif combine == 'l2':
+            msg = 'l2 is not implemented.'
+            raise ValueError(msg)
+        return dxy
+
+    def get_laplace(self, image, ksize=1, combine='l1'):
+        d2 = cv2.Laplacian(image, ddepth=cv2.CV_64F, ksize=ksize)
+        return d2
 
     def get_locations(self):
         i_mesh, j_mesh = np.meshgrid(range(2880), range(2880), indexing='ij')
