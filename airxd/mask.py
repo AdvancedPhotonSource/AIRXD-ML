@@ -5,10 +5,8 @@ from cffi import FFI
 import scipy.special as sc
 if __name__ == "__main__":
     from _mask import lib
-    #import polymask as pm
 else:
     from ._mask import lib
-    #from . import polymask as pm
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -31,9 +29,6 @@ class MASK:
         masks = {'Frames': None}
         frame = masks['Frames']
         tam = ma.make_mask_none(image.shape)
-        #if frame:
-        #    tam = ma.mask_or(tam, self.MakeFrameMask(self.controls, frame))
-        #    tam = tam.astype(int, copy=False)
 
         LUtth = np.array(self.controls['IOtth'])
         dtth = (LUtth[1]-LUtth[0])/numchans
